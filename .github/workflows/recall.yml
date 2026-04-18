@@ -13,7 +13,6 @@
 #      - SESSDATA: F12→Console 运行一键脚本获取
 #      - DEDEUSERID: 你的B站UID
 #      - REFRESH_TOKEN: ac_time_value (推荐, 自动续期)
-#      - FAVORITE_IDS: 收藏夹ID(多个逗号分隔, 留空则全部) (可从收藏夹页面URL获取, 如 https://space.bilibili.com/xxx/favlist?fid=12345 中的 12345)
 #      - GIT_DB_REPO_URL: Git DB 仓库地址 (如 https://github.com/user/repo.git)
 #      - GIT_DB_BRANCH: Git DB 分支名 (如 HX-RECALL)
 #      - GITHUB_TOKEN: 自动注入, 无需手动添加
@@ -22,6 +21,8 @@
 #      - NOTIFY_EMAIL_SENDER: 发件邮箱
 #      - NOTIFY_EMAIL_PASSWORD: 邮箱授权码
 #      - NOTIFY_EMAIL_RECEIVERS: 收件邮箱(多个逗号分隔)
+#      Variables (非机密, 可随时修改):
+#      - FAVORITE_IDS: 收藏夹ID(多个逗号分隔, 留空则全部, 可从收藏夹URL获取)
 #   3. 详见 GET_COOKIES_GUIDE.md
 
 name: Recall Dusty Favorites
@@ -109,7 +110,7 @@ jobs:
           NOTIFY_EMAIL_SENDER: ${{ secrets.NOTIFY_EMAIL_SENDER }}
           NOTIFY_EMAIL_PASSWORD: ${{ secrets.NOTIFY_EMAIL_PASSWORD }}
           NOTIFY_EMAIL_RECEIVERS: ${{ secrets.NOTIFY_EMAIL_RECEIVERS }}
-          FAVORITE_IDS: ${{ secrets.FAVORITE_IDS }}
+          FAVORITE_IDS: ${{ vars.FAVORITE_IDS }}
 
       - name: Run HX-Recall
         env:
