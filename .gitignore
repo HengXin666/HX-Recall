@@ -1,0 +1,41 @@
+config.yaml
+__pycache__/
+*.pyc
+.venv/
+.uv/
+*.egg-info/
+dist/
+
+# 缓存文件（Git DB 模式下使用远程存储，本地缓存也忽略）
+.video_cache.json
+.recall_state.json
+
+# 本地测试文件
+*.local.py
+*.local.yaml
+.local.*
+test_local.py
+check_cookie_expiry.py
+
+# 开发环境配置
+.env
+.env.local
+.env.*
+.secrets*
+*.secret
+*.key
+
+# IDE配置文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 临时文件和日志
+*.log
+logs/
+temp/
+tmp/
+*.tmp
+*.temp

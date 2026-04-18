@@ -1,0 +1,84 @@
+# HX-Recall: B站收藏夹吃灰清灰 - 定时推送
+#
+# 功能: 每天从你的B站收藏夹中挑选"最久未见的好内容"推送给你
+# 默认: 每天 UTC 10:00 (北京时间 18:00)
+#
+# 缓存: 使用 Git DB (only 模式) 存储到 __HX-Data__ 仓库的 HX-RECALL 分支
+# 无需 commit 缓存文件到本仓库
+#
+# 首次使用:
+#   1. Fork 本仓库
+#   2. Settings → Secrets → Actions 添加:
+#      - SESSDATA: F12→Console 运行一键脚本获取
+#      - DEDEUSERID: 你的B站UID
+#      - REFRESH_TOKEN: ac_time_value (推荐, 自动续期)
+#      - GITHUB_TOKEN: 自动注入, 无需手动添加
+#   3. 修改 config.yaml 中的 favorite_ids
+#   4. 配置 notify.email 邮件推送
+#   5. 详见 GET_COOKIES_GUIDE.md
+
+name: Recall Dusty Favorites
+
+on:
+  schedule:
+    - cron: "0 10 * * *"  # UTC 10:00 = 北京 18:00
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  recall:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Build config from secrets
+        run: |
+          python3 -c "
+          import yaml
+          with open('config.yaml', 'r') as f:
+              cfg = yaml.safe_load(f)
+
+          import os
+          cred = cfg.setdefault('bilibili_credential', {})
+          if os.environ.get('SESSDATA'):
+              cred['sessdata'] = os.environ['SESSDATA']
+          if os.environ.get('DEDEUSERID'):
+              cred['dedeuserid'] = os.environ['DEDEUSERID']
+          if os.environ.get('REFRESH_TOKEN'):
+              cred['refresh_token'] = os.environ['REFRESH_TOKEN']
+
+          with open('config.yaml', 'w') as f:
+              yaml.dump(cfg, f, allow_unicode=True, default_flow_style=False)
+          print('config.yaml built from secrets')
+          "
+        env:
+          SESSDATA: ${{ secrets.SESSDATA }}
+          DEDEUSERID: ${{ secrets.DEDEUSERID }}
+          REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
+
+      - name: Run HX-Recall
+        env:
+          SESSDATA: ${{ secrets.SESSDATA }}
+          DEDEUSERID: ${{ secrets.DEDEUSERID }}
+          REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTIONS: "true"
+        run: uv run python -m hx_recall --config config.yaml

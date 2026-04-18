@@ -1,0 +1,19 @@
+[project]
+name = "hx-recall"
+version = "0.1.0"
+description = "B站收藏夹回顾推送工具 - 定时推送你错过的好内容"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "bilibili-api-python>=16.3.1",
+    "hx-git-db @ git+https://github.com/HengXin666/HX-Git-DB.git",
+    "httpx>=0.27.0",
+    "pycryptodome>=3.23.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+browser = ["rookiepy>=0.5.6"]
+
+[project.scripts]
+hx-recall = "hx_recall.cli:main"
