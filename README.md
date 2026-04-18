@@ -116,9 +116,13 @@ uv run hx-recall -s dusty -k 3
 
 **Variables** (非机密, 可随时修改, 位于 Settings → Variables):
 
-| Name | 说明 |
-|------|------|
-| `FAVORITE_IDS` | 收藏夹 ID, 多个逗号分隔, 留空则全部 |
+| Name | 说明 | 默认值 |
+|------|------|--------|
+| `FAVORITE_IDS` | 收藏夹 ID, 多个逗号分隔, 留空则全部 | 全部 |
+| `STRATEGY` | 选取策略: `random`/`latest`/`oldest`/`dusty` | `dusty` |
+| `TOP_K` | 每次推送数量 | `5` |
+| `DUST_COOLDOWN_DAYS` | 吃灰冷却期天数 | `30` |
+| `DUST_ALLOW_REPUSH` | 冷却期后是否允许重复推送 | `true` |
 
 所有配置均通过 Secrets/Variables 注入, **无需修改仓库中的任何文件**。
 

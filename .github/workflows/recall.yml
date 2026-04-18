@@ -23,6 +23,10 @@
 #      - NOTIFY_EMAIL_RECEIVERS: 收件邮箱(多个逗号分隔)
 #      Variables (非机密, 可随时修改):
 #      - FAVORITE_IDS: 收藏夹ID(多个逗号分隔, 留空则全部, 可从收藏夹URL获取)
+#      - STRATEGY: 选取策略 (random/latest/oldest/dusty, 默认dusty)
+#      - TOP_K: 每次推送数量 (默认5)
+#      - DUST_COOLDOWN_DAYS: 吃灰冷却期天数 (默认30)
+#      - DUST_ALLOW_REPUSH: 冷却期后是否允许重复推送 (true/false, 默认true)
 #   3. 详见 GET_COOKIES_GUIDE.md
 
 name: Recall Dusty Favorites
@@ -68,10 +72,13 @@ jobs:
               'sessdata': os.environ.get('SESSDATA', ''),
               'dedeuserid': os.environ.get('DEDEUSERID', ''),
             },
-            'top_k': 5,
-            'strategy': 'dusty',
+            'top_k': int(os.environ.get('TOP_K', '5') or '5'),
+            'strategy': os.environ.get('STRATEGY', 'dusty') or 'dusty',
             'favorite_ids': [int(x) for x in os.environ.get('FAVORITE_IDS', '').split(',') if x.strip()],
-            'dust': {'cooldown_days': 30, 'allow_repush': True},
+            'dust': {
+              'cooldown_days': int(os.environ.get('DUST_COOLDOWN_DAYS', '30') or '30'),
+              'allow_repush': os.environ.get('DUST_ALLOW_REPUSH', 'true').lower() != 'false',
+            },
             'git_db': {
               'enabled': True,
               'repo_url': os.environ.get('GIT_DB_REPO_URL', ''),
@@ -112,9 +119,16 @@ jobs:
           NOTIFY_EMAIL_PASSWORD: ${{ secrets.NOTIFY_EMAIL_PASSWORD }}
           NOTIFY_EMAIL_RECEIVERS: ${{ secrets.NOTIFY_EMAIL_RECEIVERS }}
           FAVORITE_IDS: ${{ vars.FAVORITE_IDS }}
+          STRATEGY: ${{ vars.STRATEGY }}
+          # 每次推送数量
+          TOP_K: ${{ vars.TOP_K }}
+          # 冷却期天数
+          DUST_COOLDOWN_DAYS: ${{ vars.DUST_COOLDOWN_DAYS }}
+          # 选取策略: random(随机) | latest(最新收藏) | oldest(最老收藏-适合回顾) | dusty(吃灰清灰-优先推最久未见的)
+          DUST_ALLOW_REPUSH: ${{ vars.DUST_ALLOW_REPUSH }}
 
       - name: Run HX-Recall
         env:
           GITHUB_TOKEN: ${{ secrets.GIT_DB_TOKEN }}
           GITHUB_ACTIONS: "true"
-        run: uv run python -m hx_recall --config config.yaml
+        run: uv run python -u -m hx_recall --config config.yaml
