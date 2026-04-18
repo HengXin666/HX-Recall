@@ -106,6 +106,7 @@ uv run hx-recall -s dusty -k 3
 | `SESSDATA` | B站登录凭证 | 是 |
 | `DEDEUSERID` | B站 UID | 是 |
 | `REFRESH_TOKEN` | `ac_time_value`, 启用自动续期 | 推荐 |
+| `FAVORITE_IDS` | 收藏夹 ID, 多个逗号分隔, 留空则全部 | 否 |
 | `GIT_DB_REPO_URL` | Git DB 仓库地址, 如 `https://github.com/user/repo.git` | Git DB 模式 |
 | `GIT_DB_BRANCH` | Git DB 分支名, 如 `HX-RECALL` | Git DB 模式 |
 | `GITHUB_TOKEN` | 自动注入, 无需手动添加 | 自动 |
