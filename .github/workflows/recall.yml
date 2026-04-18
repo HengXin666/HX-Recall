@@ -54,7 +54,7 @@ jobs:
 
       - name: Build config from secrets
         run: |
-          python3 -c "
+          uv run python3 -c "
           import yaml
           with open('config.yaml', 'r') as f:
               cfg = yaml.safe_load(f)
