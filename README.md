@@ -108,7 +108,7 @@ uv run hx-recall -s dusty -k 3
 | `REFRESH_TOKEN` | `ac_time_value`, 启用自动续期 | 推荐 |
 | `GIT_DB_REPO_URL` | Git DB 仓库地址, 如 `https://github.com/user/repo.git` | Git DB 模式 |
 | `GIT_DB_BRANCH` | Git DB 分支名, 如 `HX-RECALL` | Git DB 模式 |
-| `GITHUB_TOKEN` | 自动注入, 无需手动添加 | 自动 |
+| `GIT_DB_TOKEN` | 有目标仓库写权限的 PAT (见下方说明) | Git DB 模式 |
 | `NOTIFY_EMAIL_SMTP` | SMTP 服务器, 如 `smtp.qq.com` | 邮件推送 |
 | `NOTIFY_EMAIL_SENDER` | 发件邮箱 | 邮件推送 |
 | `NOTIFY_EMAIL_PASSWORD` | 邮箱授权码 | 邮件推送 |
@@ -120,7 +120,40 @@ uv run hx-recall -s dusty -k 3
 |------|------|
 | `FAVORITE_IDS` | 收藏夹 ID, 多个逗号分隔, 留空则全部 |
 
-所有配置均通过 Secrets 注入, **无需修改仓库中的任何文件**。
+所有配置均通过 Secrets/Variables 注入, **无需修改仓库中的任何文件**。
+
+### GIT_DB_TOKEN 配置指南
+
+Git DB 需要一个有目标仓库写权限的 **Personal Access Token (PAT)** 来推送缓存数据。
+
+> **为什么不能用 `GITHUB_TOKEN`?** `GITHUB_TOKEN` 只能访问当前仓库(HX-Recall), 无法推送到其他仓库。
+
+#### 第一步: 创建数据仓库
+
+在 GitHub 上新建一个**私有仓库**用于存储缓存数据(如 `my-data`)，不需要添加任何文件。
+
+#### 第二步: 创建 PAT
+
+1. 进入 GitHub **Settings → Developer settings → Personal access tokens → Fine-grained tokens**
+2. 点击 **Generate new token**
+3. 填写:
+   - **Token name**: `HX-Recall Git DB` (随意)
+   - **Expiration**: 选择最长有效期
+   - **Repository access**: 选择 **Only select repositories** → 选中你刚创建的数据仓库
+4. **Permissions → Repository permissions → Contents**: 设为 **Read and write**
+5. 点击 **Generate token**, 复制生成的 token
+
+> 也可以使用 **Classic token**, 勾选 `repo` 权限即可, 但 Fine-grained token 更安全(最小权限原则)。
+
+#### 第三步: 配置 Secrets
+
+回到 HX-Recall 仓库 → **Settings → Secrets → Actions**:
+
+| Secret | 值 |
+|--------|-----|
+| `GIT_DB_REPO_URL` | `https://github.com/<你的用户名>/<数据仓库名>.git` |
+| `GIT_DB_BRANCH` | 分支名, 如 `HX-RECALL` |
+| `GIT_DB_TOKEN` | 上一步生成的 PAT |
 
 ### 3. 手动触发验证
 

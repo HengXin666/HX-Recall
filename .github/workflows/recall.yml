@@ -15,7 +15,7 @@
 #      - REFRESH_TOKEN: ac_time_value (推荐, 自动续期)
 #      - GIT_DB_REPO_URL: Git DB 仓库地址 (如 https://github.com/user/repo.git)
 #      - GIT_DB_BRANCH: Git DB 分支名 (如 HX-RECALL)
-#      - GITHUB_TOKEN: 自动注入, 无需手动添加
+#      - GIT_DB_TOKEN: 有目标仓库写权限的 PAT (Personal Access Token)
 #      邮件推送(可选):
 #      - NOTIFY_EMAIL_SMTP: SMTP服务器 (如 smtp.qq.com)
 #      - NOTIFY_EMAIL_SENDER: 发件邮箱
@@ -76,7 +76,7 @@ jobs:
               'enabled': True,
               'repo_url': os.environ.get('GIT_DB_REPO_URL', ''),
               'branch': os.environ.get('GIT_DB_BRANCH', ''),
-              'token': '',
+              'token': os.environ.get('GIT_DB_TOKEN', ''),
             },
             'schedule': {'cron': '0 10 * * *', 'enabled': True},
             'notify': {
@@ -106,6 +106,7 @@ jobs:
           REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
           GIT_DB_REPO_URL: ${{ secrets.GIT_DB_REPO_URL }}
           GIT_DB_BRANCH: ${{ secrets.GIT_DB_BRANCH }}
+          GIT_DB_TOKEN: ${{ secrets.GIT_DB_TOKEN }}
           NOTIFY_EMAIL_SMTP: ${{ secrets.NOTIFY_EMAIL_SMTP }}
           NOTIFY_EMAIL_SENDER: ${{ secrets.NOTIFY_EMAIL_SENDER }}
           NOTIFY_EMAIL_PASSWORD: ${{ secrets.NOTIFY_EMAIL_PASSWORD }}
@@ -114,9 +115,6 @@ jobs:
 
       - name: Run HX-Recall
         env:
-          SESSDATA: ${{ secrets.SESSDATA }}
-          DEDEUSERID: ${{ secrets.DEDEUSERID }}
-          REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GIT_DB_TOKEN }}
           GITHUB_ACTIONS: "true"
         run: uv run python -m hx_recall --config config.yaml
