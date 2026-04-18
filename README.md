@@ -106,6 +106,8 @@ uv run hx-recall -s dusty -k 3
 | `SESSDATA` | B站登录凭证 | 是 |
 | `DEDEUSERID` | B站 UID | 是 |
 | `REFRESH_TOKEN` | `ac_time_value`, 启用自动续期 | 推荐 |
+| `GIT_DB_REPO_URL` | Git DB 仓库地址, 如 `https://github.com/user/repo.git` | Git DB 模式 |
+| `GIT_DB_BRANCH` | Git DB 分支名, 如 `HX-RECALL` | Git DB 模式 |
 | `GITHUB_TOKEN` | 自动注入, 无需手动添加 | 自动 |
 
 ### 3. 修改 config.yaml
@@ -140,10 +142,14 @@ uv run hx-recall -s dusty -k 3
 ```yaml
 git_db:
   enabled: true
+  repo_url: "https://github.com/user/repo.git"  # Git DB 仓库地址
+  branch: "HX-RECALL"                           # 分支名
   token: ""  # 留空则自动读取 GITHUB_TOKEN 环境变量
 ```
 
-启用后缓存数据存储到 [HX-Git-DB](https://github.com/HengXin666/HX-Git-DB) 仓库的 `HX-RECALL` 分支, 使用 only 模式(分支永远只有一个提交), 适合 GitHub Actions 场景。
+启用后缓存数据存储到指定的 Git 仓库分支, 使用 [HX-Git-DB](https://github.com/HengXin666/HX-Git-DB) only 模式(分支永远只有一个提交), 适合 GitHub Actions 场景。
+
+> **GitHub Actions 部署时**, `repo_url` 和 `branch` 优先从 Secrets `GIT_DB_REPO_URL` / `GIT_DB_BRANCH` 注入, 无需在 `config.yaml` 中明文填写。
 
 ## 项目结构
 

@@ -33,9 +33,6 @@ from hx_recall.formatter import format_message, format_video_data_list
 from hx_recall.state import RecallState, get_state_path
 from hx_recall.video_cache import VideoCache, get_cache_path
 
-GIT_DB_REPO = "https://github.com/HengXin666/__HX-Data__.git"
-GIT_DB_BRANCH = "HX-RECALL"
-
 
 def _win_rmtree_onexc(func, path, exc_info):
     """Windows 兼容的 rmtree 回调：清除只读属性后重试"""
@@ -326,7 +323,7 @@ async def run(config_path: str = "config.yaml") -> None:
         from hx_git_db import make_database
 
         token = cfg.git_db.token or None
-        db = make_database(GIT_DB_REPO, GIT_DB_BRANCH, only=True, token=token)
+        db = make_database(cfg.git_db.repo_url, cfg.git_db.branch, only=True, token=token)
         _patch_db_cleanup(db)
         with db:
             await _run_inner(cfg, uid, db=db, config_path=config_path)

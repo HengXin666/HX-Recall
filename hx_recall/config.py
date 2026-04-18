@@ -73,7 +73,9 @@ class GitDBConfig:
     若 enabled=False，则使用本地 JSON 文件（原始行为）。
     """
     enabled: bool = False
-    token: str = ""  # GitHub token，空则自动读取 GITHUB_TOKEN 环境变量
+    repo_url: str = ""  # Git 仓库地址，如 https://github.com/user/repo.git
+    branch: str = ""    # 分支名，如 HX-RECALL
+    token: str = ""     # GitHub token，空则自动读取 GITHUB_TOKEN 环境变量
 
 
 @dataclass
@@ -163,6 +165,8 @@ def load_config(path: str = "config.yaml") -> AppConfig:
         ),
         git_db=GitDBConfig(
             enabled=raw.get("git_db", {}).get("enabled", False),
+            repo_url=raw.get("git_db", {}).get("repo_url", ""),
+            branch=raw.get("git_db", {}).get("branch", ""),
             token=raw.get("git_db", {}).get("token", ""),
         ),
     )
