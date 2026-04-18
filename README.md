@@ -109,16 +109,14 @@ uv run hx-recall -s dusty -k 3
 | `GIT_DB_REPO_URL` | Git DB 仓库地址, 如 `https://github.com/user/repo.git` | Git DB 模式 |
 | `GIT_DB_BRANCH` | Git DB 分支名, 如 `HX-RECALL` | Git DB 模式 |
 | `GITHUB_TOKEN` | 自动注入, 无需手动添加 | 自动 |
+| `NOTIFY_EMAIL_SMTP` | SMTP 服务器, 如 `smtp.qq.com` | 邮件推送 |
+| `NOTIFY_EMAIL_SENDER` | 发件邮箱 | 邮件推送 |
+| `NOTIFY_EMAIL_PASSWORD` | 邮箱授权码 | 邮件推送 |
+| `NOTIFY_EMAIL_RECEIVERS` | 收件邮箱, 多个逗号分隔 | 邮件推送 |
 
-### 3. 修改 config.yaml
+所有配置均通过 Secrets 注入, **无需修改仓库中的任何文件**。
 
-- `favorite_ids`: 指定收藏夹 ID
-- `strategy`: 选取策略
-- `notify.email`: 邮件推送配置
-
-> **切勿在 config.yaml 中填写 SESSDATA**, 它由 GitHub Secrets 注入。
-
-### 4. 手动触发验证
+### 3. 手动触发验证
 
 **Actions → Recall Dusty Favorites → Run workflow**
 

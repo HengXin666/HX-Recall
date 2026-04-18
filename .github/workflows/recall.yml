@@ -16,9 +16,12 @@
 #      - GIT_DB_REPO_URL: Git DB 仓库地址 (如 https://github.com/user/repo.git)
 #      - GIT_DB_BRANCH: Git DB 分支名 (如 HX-RECALL)
 #      - GITHUB_TOKEN: 自动注入, 无需手动添加
-#   3. 修改 config.yaml 中的 favorite_ids
-#   4. 配置 notify.email 邮件推送
-#   5. 详见 GET_COOKIES_GUIDE.md
+#      邮件推送(可选):
+#      - NOTIFY_EMAIL_SMTP: SMTP服务器 (如 smtp.qq.com)
+#      - NOTIFY_EMAIL_SENDER: 发件邮箱
+#      - NOTIFY_EMAIL_PASSWORD: 邮箱授权码
+#      - NOTIFY_EMAIL_RECEIVERS: 收件邮箱(多个逗号分隔)
+#   3. 详见 GET_COOKIES_GUIDE.md
 
 name: Recall Dusty Favorites
 
@@ -55,28 +58,45 @@ jobs:
       - name: Build config from secrets
         run: |
           uv run python3 -c "
-          import yaml
-          with open('config.yaml', 'r') as f:
-              cfg = yaml.safe_load(f)
+          import yaml, os
 
-          import os
-          cred = cfg.setdefault('bilibili_credential', {})
-          if os.environ.get('SESSDATA'):
-              cred['sessdata'] = os.environ['SESSDATA']
-          if os.environ.get('DEDEUSERID'):
-              cred['dedeuserid'] = os.environ['DEDEUSERID']
-          if os.environ.get('REFRESH_TOKEN'):
-              cred['refresh_token'] = os.environ['REFRESH_TOKEN']
-
-          git_db = cfg.setdefault('git_db', {})
-          if os.environ.get('GIT_DB_REPO_URL'):
-              git_db['repo_url'] = os.environ['GIT_DB_REPO_URL']
-          if os.environ.get('GIT_DB_BRANCH'):
-              git_db['branch'] = os.environ['GIT_DB_BRANCH']
+          cfg = {
+            'bilibili_uid': int(os.environ.get('DEDEUSERID', '0') or '0'),
+            'bilibili_credential': {
+              'sessdata': os.environ.get('SESSDATA', ''),
+              'dedeuserid': os.environ.get('DEDEUSERID', ''),
+            },
+            'top_k': 5,
+            'strategy': 'dusty',
+            'favorite_ids': [],
+            'dust': {'cooldown_days': 30, 'allow_repush': True},
+            'git_db': {
+              'enabled': True,
+              'repo_url': os.environ.get('GIT_DB_REPO_URL', ''),
+              'branch': os.environ.get('GIT_DB_BRANCH', ''),
+              'token': '',
+            },
+            'schedule': {'cron': '0 10 * * *', 'enabled': True},
+            'notify': {
+              'email': {
+                'enabled': bool(os.environ.get('NOTIFY_EMAIL_SMTP', '')),
+                'smtp_host': os.environ.get('NOTIFY_EMAIL_SMTP', ''),
+                'smtp_port': 465,
+                'use_ssl': True,
+                'sender': os.environ.get('NOTIFY_EMAIL_SENDER', ''),
+                'password': os.environ.get('NOTIFY_EMAIL_PASSWORD', ''),
+                'receivers': [r for r in os.environ.get('NOTIFY_EMAIL_RECEIVERS', '').split(',') if r],
+              },
+              'server_chan': {'enabled': False, 'sendkey': ''},
+              'telegram': {'enabled': False, 'bot_token': '', 'chat_id': ''},
+              'webhook': {'enabled': False, 'url': '', 'headers': {}},
+              'console': {'enabled': True},
+            },
+          }
 
           with open('config.yaml', 'w') as f:
               yaml.dump(cfg, f, allow_unicode=True, default_flow_style=False)
-          print('config.yaml built from secrets')
+          print('config.yaml created from secrets')
           "
         env:
           SESSDATA: ${{ secrets.SESSDATA }}
@@ -84,6 +104,10 @@ jobs:
           REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
           GIT_DB_REPO_URL: ${{ secrets.GIT_DB_REPO_URL }}
           GIT_DB_BRANCH: ${{ secrets.GIT_DB_BRANCH }}
+          NOTIFY_EMAIL_SMTP: ${{ secrets.NOTIFY_EMAIL_SMTP }}
+          NOTIFY_EMAIL_SENDER: ${{ secrets.NOTIFY_EMAIL_SENDER }}
+          NOTIFY_EMAIL_PASSWORD: ${{ secrets.NOTIFY_EMAIL_PASSWORD }}
+          NOTIFY_EMAIL_RECEIVERS: ${{ secrets.NOTIFY_EMAIL_RECEIVERS }}
 
       - name: Run HX-Recall
         env:
