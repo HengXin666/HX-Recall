@@ -57,7 +57,7 @@ jobs:
 
       - name: Build config from secrets
         run: |
-          uv run python3 -c "
+          uv run python3 -u -c "
           import yaml, os
 
           cfg = {
