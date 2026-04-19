@@ -101,6 +101,11 @@ jobs:
               'webhook': {'enabled': False, 'url': '', 'headers': {}},
               'console': {'enabled': True},
             },
+            'houtiku': {
+              'enabled': False,
+              'endpoint': '',
+              'token': '',
+            },
           }
 
           with open('config.yaml', 'w') as f:

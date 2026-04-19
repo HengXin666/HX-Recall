@@ -79,6 +79,18 @@ class GitDBConfig:
 
 
 @dataclass
+class HouTiKuConfig:
+    """HX-HouTiKu 推送配置
+
+    通过 hx-houtiku SDK 发送端到端加密推送通知。
+    配置从 Git DB 的 HX-HouTiKu 分支 .env 文件中自动读取。
+    """
+    enabled: bool = False
+    endpoint: str = ""   # HX_HOUTIKU_ENDPOINT
+    token: str = ""      # HX_HOUTIKU_TOKEN
+
+
+@dataclass
 class AppConfig:
     bilibili_uid: int = 0
     bilibili_credential: BilibiliCredentialConfig = field(
@@ -91,6 +103,7 @@ class AppConfig:
     schedule: ScheduleConfig = field(default_factory=ScheduleConfig)
     dust: DustConfig = field(default_factory=DustConfig)
     git_db: GitDBConfig = field(default_factory=GitDBConfig)
+    houtiku: HouTiKuConfig = field(default_factory=HouTiKuConfig)
 
 
 def load_config(path: str = "config.yaml") -> AppConfig:
@@ -168,6 +181,11 @@ def load_config(path: str = "config.yaml") -> AppConfig:
             repo_url=raw.get("git_db", {}).get("repo_url", ""),
             branch=raw.get("git_db", {}).get("branch", ""),
             token=raw.get("git_db", {}).get("token", ""),
+        ),
+        houtiku=HouTiKuConfig(
+            enabled=raw.get("houtiku", {}).get("enabled", False),
+            endpoint=raw.get("houtiku", {}).get("endpoint", ""),
+            token=raw.get("houtiku", {}).get("token", ""),
         ),
     )
 

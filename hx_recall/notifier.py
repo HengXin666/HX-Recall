@@ -43,6 +43,10 @@ async def notify(message: str, cfg: AppConfig, videos_data: list[VideoData] | No
         await _notify_webhook(message, cfg.notify.webhook)
         results.append("webhook")
 
+    if cfg.houtiku.enabled:
+        _notify_houtiku(message, cfg)
+        results.append("houtiku")
+
     if not results:
         print("⚠️ 没有启用任何推送渠道")
 
@@ -352,6 +356,27 @@ async def _notify_webhook(message: str, cfg) -> None:
         )
         resp.raise_for_status()
         print(f"✅ Webhook推送成功")
+
+
+def _notify_houtiku(message: str, cfg: "AppConfig") -> None:
+    """通过 HX-HouTiKu SDK 发送端到端加密推送通知"""
+    try:
+        from hx_houtiku import HxHoutikuClient
+
+        client = HxHoutikuClient(
+            endpoint=cfg.houtiku.endpoint,
+            api_token=cfg.houtiku.token,
+        )
+        client.send(
+            title=f"📚 B站收藏夹回顾 ({_today_str()})",
+            body=message,
+            content_type="text",
+            priority="default",
+            group="hx-recall",
+        )
+        print("✅ HouTiKu推送成功")
+    except Exception as e:
+        print(f"❌ HouTiKu推送失败: {e}")
 
 
 # ---- 凭证失效告警邮件 ----

@@ -55,6 +55,60 @@ def _patch_db_cleanup(db: "DataBase") -> None:
     db.cleanup = win_safe_cleanup
 
 
+def _load_houtiku_config_from_gitdb(cfg: "AppConfig") -> None:
+    """从 Git DB 的 HX-HouTiKu 分支读取 .env 获取 HouTiKu 配置
+
+    使用 hx-git-db 从 https://github.com/HengXin666/__HX-Data__.git 的
+    HX-HouTiKu 分支下读取 .env 文件，解析 HX_HOUTIKU_ENDPOINT 和 HX_HOUTIKU_TOKEN。
+    """
+    if not cfg.git_db.enabled:
+        return
+
+    try:
+        from hx_git_db import make_database
+
+        repo_url = "https://github.com/HengXin666/__HX-Data__.git"
+        branch = "HX-HouTiKu"
+        token = cfg.git_db.token or None
+
+        db = make_database(repo_url, branch, only=True, token=token)
+        _patch_db_cleanup(db)
+        with db:
+            with db.open(".env") as f:
+                env_content = f.read()
+
+        if not env_content:
+            print("[HouTiKu] Git DB 中未找到 .env 文件")
+            return
+
+        # 解析 .env 文件
+        endpoint = ""
+        api_token = ""
+        for line in env_content.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" in line:
+                key, _, value = line.partition("=")
+                key = key.strip()
+                value = value.strip().strip("\"'")
+                if key == "HX_HOUTIKU_ENDPOINT":
+                    endpoint = value
+                elif key == "HX_HOUTIKU_TOKEN":
+                    api_token = value
+
+        if endpoint and api_token:
+            cfg.houtiku.enabled = True
+            cfg.houtiku.endpoint = endpoint
+            cfg.houtiku.token = api_token
+            print(f"[HouTiKu] 已从 Git DB 加载配置 (endpoint: {endpoint[:30]}...)")
+        else:
+            print("[HouTiKu] .env 中缺少 HX_HOUTIKU_ENDPOINT 或 HX_HOUTIKU_TOKEN")
+
+    except Exception as e:
+        print(f"[HouTiKu] 从 Git DB 加载配置失败: {e}")
+
+
 async def _verify_and_recover_credential(
     config_path: str, cfg: "AppConfig"
 ) -> "Credential":
@@ -316,6 +370,9 @@ async def _enrich_videos_with_detail(
 async def run(config_path: str = "config.yaml") -> None:
     cfg = load_config(config_path)
     uid = cfg.bilibili_uid
+
+    # 从 Git DB 加载 HouTiKu 推送配置
+    _load_houtiku_config_from_gitdb(cfg)
 
     use_git_db = cfg.git_db.enabled
 
