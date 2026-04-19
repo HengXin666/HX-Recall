@@ -517,6 +517,15 @@ async def get_favorite_videos_direct_api(
                             if not isinstance(item, dict):
                                 continue
                             if item.get("type") == 2:
+                                # 过滤已失效/不可见的视频
+                                # attr & 9 != 0 表示视频失效(bit0)或待审(bit3)
+                                item_attr = item.get("attr", 0)
+                                if item_attr and (item_attr & 9):
+                                    continue
+                                item_title = item.get("title", "")
+                                if item_title in ("已失效视频", ""):
+                                    continue
+
                                 bvid = item.get("bvid") or item.get("bv_id")
                                 if bvid:
                                     if known_bvids and bvid in known_bvids:

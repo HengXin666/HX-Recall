@@ -216,12 +216,15 @@ async def _crawl_favorites_incremental(
         resume_page = state.get_resume_page(fav_id)
         cached_count = state.get_fav_crawled_count(fav_id)
 
-        # 增量模式：已知视频bvid集合，遇到已缓存视频则停止
+        # 增量模式：有缓存时使用已知bvid集合，遇到已缓存视频则停止翻页
         known_bvids = None
-        if strategy in ("latest",) and cached_count > 0:
+        if cached_count > 0:
             known_bvids = state.get_known_bvids(fav_id)
             print(f"[Fav] ({i+1}/{len(target_favs)}) {fav_title}: "
                   f"缓存 {cached_count} 个, 增量模式(从第{resume_page}页)")
+        else:
+            print(f"[Fav] ({i+1}/{len(target_favs)}) {fav_title}: "
+                  f"无缓存, 全量模式(从第{resume_page}页)")
 
         print(f"[Fav] ({i+1}/{len(target_favs)}) 正在获取: {fav_title} "
               f"({media_count}个视频, 从第{resume_page}页开始)")
@@ -315,7 +318,12 @@ async def _enrich_videos_with_detail(
             }
             print(f"  详细信息: 缓存命中")
         else:
-            info = await get_video_info(bvid, credential=credential)
+            try:
+                info = await get_video_info(bvid, credential=credential)
+            except Exception as e:
+                # 已失效/不可见的视频(如 code 62002 "稿件不可见")，跳过
+                print(f"  ⚠️ 已失效视频, 跳过: {e}")
+                continue
             info["_fav_name"] = v.get("_fav_name", "")
             cache.update_video_detail(bvid, info)
             _save_cache(cache, cache_dest)
