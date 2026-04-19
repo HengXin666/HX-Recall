@@ -44,7 +44,7 @@ async def notify(message: str, cfg: AppConfig, videos_data: list[VideoData] | No
         results.append("webhook")
 
     if cfg.houtiku.enabled:
-        _notify_houtiku(message, cfg)
+        _notify_houtiku(message, cfg, videos_data)
         results.append("houtiku")
 
     if not results:
@@ -358,10 +358,16 @@ async def _notify_webhook(message: str, cfg) -> None:
         print(f"✅ Webhook推送成功")
 
 
-def _notify_houtiku(message: str, cfg: "AppConfig") -> None:
-    """通过 HX-HouTiKu SDK 发送端到端加密推送通知"""
+def _notify_houtiku(message: str, cfg: "AppConfig", videos_data: list[VideoData] | None = None) -> None:
+    """通过 HX-HouTiKu SDK 发送端到端加密推送通知 (HTML 格式)"""
     try:
         from hx_houtiku import HxHoutikuClient
+
+        # 优先使用 HTML 渲染，降级为纯文本转 HTML
+        if videos_data:
+            html_body = _render_html_email(videos_data, cfg.strategy)
+        else:
+            html_body = _message_to_html_simple(message)
 
         client = HxHoutikuClient(
             endpoint=cfg.houtiku.endpoint,
@@ -369,8 +375,8 @@ def _notify_houtiku(message: str, cfg: "AppConfig") -> None:
         )
         client.send(
             title=f"📚 B站收藏夹回顾 ({_today_str()})",
-            body=message,
-            content_type="text",
+            body=html_body,
+            content_type="html",
             priority="default",
             group="hx-recall",
         )
