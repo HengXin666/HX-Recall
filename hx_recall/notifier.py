@@ -171,13 +171,13 @@ def _render_video_card(vd: VideoData, idx: int) -> str:
     ai_html = ""
     if vd.ai_conclusion:
         escaped = vd.ai_conclusion.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
-        ai_html = f'<div class="section-label">🤖 AI 视频总结</div><div class="ai-box">{escaped}</div>'
+        ai_html = f'<div class="section-label">AI 视频总结</div><div class="ai-box">{escaped}</div>'
 
     # AI评论总结
     comment_summary_html = ""
     if vd.comment_summary:
         escaped = vd.comment_summary.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
-        comment_summary_html = f'<div class="section-label">💭 AI 评论总结</div><div class="comment-box">{escaped}</div>'
+        comment_summary_html = f'<div class="section-label">AI 评论总结</div><div class="comment-box">{escaped}</div>'
 
     # 热门评论
     hot_comments_html = ""
@@ -189,12 +189,12 @@ def _render_video_card(vd: VideoData, idx: int) -> str:
             items.append(
                 f'<div class="hot-comment-item">'
                 f'<span class="hot-name">{name_esc}</span>'
-                f'<span class="hot-like">👍 {_format_count(c.like)}</span><br>'
+                f'<span class="hot-like">{_format_count(c.like)} 赞</span><br>'
                 f'{content_esc}'
                 f'</div>'
             )
         hot_comments_html = (
-            f'<div class="section-label">🔥 热门评论</div>'
+            f'<div class="section-label">热门评论</div>'
             + "".join(items)
         )
 
@@ -203,7 +203,7 @@ def _render_video_card(vd: VideoData, idx: int) -> str:
     if vd.desc.strip():
         short = vd.desc.strip()[:120] + ("..." if len(vd.desc.strip()) > 120 else "")
         desc_esc = short.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        desc_html = f'<div class="section-label">📝 简介</div><div style="font-size:12px;color:#61666d;line-height:1.5">{desc_esc}</div>'
+        desc_html = f'<div class="section-label">简介</div><div style="font-size:12px;color:#61666d;line-height:1.5">{desc_esc}</div>'
 
     return f"""
 <div class="video-card">
@@ -212,21 +212,21 @@ def _render_video_card(vd: VideoData, idx: int) -> str:
     <div class="video-info">
       <a class="video-title" href="{vd.link}" target="_blank">{vd.title.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")}</a>
       <p class="video-meta">
-        <span>👤 {vd.owner_name}</span>
-        <span>📁 {vd.fav_name}</span>
+        <span>UP: {vd.owner_name}</span>
+        <span>收藏夹: {vd.fav_name}</span>
       </p>
       <p class="video-meta">
-        <span>⏱ {vd.duration_str}</span>
-        <span>📅 {vd.pubdate_str}</span>
+        <span>时长: {vd.duration_str}</span>
+        <span>发布: {vd.pubdate_str}</span>
       </p>
     </div>
   </div>
   <div class="stats-row">
-    <span class="stat-item">👀 <span class="val">{vd.view_str}</span></span>
-    <span class="stat-item">👍 <span class="val">{vd.like_str}</span></span>
-    <span class="stat-item">🪙 <span class="val">{vd.coin_str}</span></span>
-    <span class="stat-item">⭐ <span class="val">{vd.favorite_str}</span></span>
-    <span class="stat-item">💬 <span class="val">{vd.danmaku_str}</span></span>
+    <span class="stat-item">播放 <span class="val">{vd.view_str}</span></span>
+    <span class="stat-item">点赞 <span class="val">{vd.like_str}</span></span>
+    <span class="stat-item">硬币 <span class="val">{vd.coin_str}</span></span>
+    <span class="stat-item">收藏 <span class="val">{vd.favorite_str}</span></span>
+    <span class="stat-item">弹幕 <span class="val">{vd.danmaku_str}</span></span>
   </div>
   {ai_html}
   {comment_summary_html}
@@ -247,12 +247,12 @@ def _render_html_email(videos_data: list[VideoData], strategy: str) -> str:
 <body>
 <div class="container">
   <div class="header">
-    <h1>📚 B站收藏夹{label}</h1>
+    <h1>B站收藏夹 ·{label}</h1>
     <p>共 {len(videos_data)} 个精选视频，来看看你的好收藏~</p>
   </div>
   {cards}
   <div class="footer">
-    🔄 策略: {label} | <a href="https://github.com" target="_blank">HX-Recall</a> 自动推送
+    策略: {label} | <a href="https://github.com" target="_blank">HX-Recall</a> 自动推送
   </div>
 </div>
 <style>{_EMAIL_CSS}</style>
@@ -266,7 +266,7 @@ def _notify_email(message: str, cfg, videos_data: list[VideoData] | None = None)
         return
 
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"📚 B站收藏夹回顾 ({_today_str()})"
+    msg["Subject"] = f"B站收藏夹 ·回顾 ({_today_str()})"
     msg["From"] = cfg.sender
     msg["To"] = ", ".join(cfg.receivers)
 
@@ -300,15 +300,15 @@ def _message_to_html_simple(message: str) -> str:
     lines = message.split("\n")
     html_lines = []
     for line in lines:
-        if line.startswith("📚"):
+        if line.startswith("B站收藏夹"):
             html_lines.append(f"<h2>{line}</h2>")
         elif line.startswith("─"):
             html_lines.append("<hr>")
         elif line and line[0].isdigit() and "." in line[:4]:
             html_lines.append(f"<h3>{line}</h3>")
-        elif line.startswith("   🔗"):
-            url = line.replace("   🔗", "").strip()
-            html_lines.append(f'<p>🔗 <a href="{url}">{url}</a></p>')
+        elif line.startswith("   链接:"):
+            url = line.replace("   链接:", "").strip()
+            html_lines.append(f'<p>链接: <a href="{url}">{url}</a></p>')
         elif line.strip():
             escaped = line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             html_lines.append(f"<p>{escaped}</p>")
@@ -324,7 +324,7 @@ async def _notify_server_chan(message: str, cfg) -> None:
         resp = await client.post(
             url,
             data={
-                "title": f"📚 B站收藏夹回顾 ({_today_str()})",
+                "title": f"B站收藏夹 ·回顾 ({_today_str()})",
                 "desp": message,
             },
         )
@@ -351,7 +351,7 @@ async def _notify_webhook(message: str, cfg) -> None:
     async with httpx.AsyncClient() as client:
         resp = await client.post(
             cfg.url,
-            json={"content": message, "title": f"📚 B站收藏夹回顾 ({_today_str()})"},
+            json={"content": message, "title": f"B站收藏夹 ·回顾 ({_today_str()})"},
             headers=cfg.headers or {},
         )
         resp.raise_for_status()
@@ -376,7 +376,7 @@ def _notify_houtiku(message: str, cfg: "AppConfig", videos_data: list[VideoData]
             auto_fetch_recipients=not bool(cfg.houtiku.recipients),
         )
         client.send(
-            title=f"📚 B站收藏夹回顾 ({_today_str()})",
+            title=f"B站收藏夹 ·回顾 ({_today_str()})",
             body=html_body,
             content_type="html",
             priority="default",

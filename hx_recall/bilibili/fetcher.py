@@ -303,6 +303,7 @@ async def get_hot_comments(
             "level": 0,
         })
 
+    results.sort(key=lambda c: c["like"], reverse=True)
     return results
 
 

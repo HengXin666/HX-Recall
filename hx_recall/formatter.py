@@ -124,48 +124,48 @@ def _to_video_data(v: dict) -> VideoData:
 def format_message(videos: list[dict], strategy: str = "random") -> str:
     """将视频列表格式化为纯文本推送消息"""
     label = STRATEGY_LABELS.get(strategy, "回顾")
-    lines = [f"📚 B站收藏夹{label}", f"共 {len(videos)} 个视频\n"]
+    lines = [f"B站收藏夹 ·{label}", f"共 {len(videos)} 个视频\n"]
 
     for i, v in enumerate(videos, 1):
         vd = _to_video_data(v)
         lines.append(f"{'─' * 30}")
         lines.append(f"{i}. {vd.title}")
-        lines.append(f"   📁 收藏夹: {vd.fav_name}")
-        lines.append(f"   👤 UP主: {vd.owner_name}")
-        lines.append(f"   ⏱ 时长: {vd.duration_str}")
-        lines.append(f"   📅 发布: {vd.pubdate_str}")
+        lines.append(f"   收藏夹: {vd.fav_name}")
+        lines.append(f"   UP主: {vd.owner_name}")
+        lines.append(f"   时长: {vd.duration_str}")
+        lines.append(f"   发布: {vd.pubdate_str}")
         lines.append(
-            f"   👀 {vd.view_str}  "
-            f"👍 {vd.like_str}  "
-            f"🪙 {vd.coin_str}  "
-            f"⭐ {vd.favorite_str}  "
-            f"💬 {vd.danmaku_str}"
+            f"   播放 {vd.view_str}  "
+            f"点赞 {vd.like_str}  "
+            f"硬币 {vd.coin_str}  "
+            f"收藏 {vd.favorite_str}  "
+            f"弹幕 {vd.danmaku_str}"
         )
 
         if vd.ai_conclusion:
-            lines.append(f"   🤖 AI视频总结:")
+            lines.append(f"   [AI总结] ")
             for line in vd.ai_conclusion.split("\n"):
                 lines.append(f"      {line}")
 
         if vd.comment_summary:
-            lines.append(f"   💭 AI评论总结:")
+            lines.append(f"   [AI评论] ")
             for line in vd.comment_summary.split("\n"):
                 lines.append(f"      {line}")
 
         if vd.hot_comments:
-            lines.append(f"   🔥 热门评论:")
+            lines.append(f"   热门评论:")
             for c in vd.hot_comments[:3]:
-                lines.append(f"      【{c.name}】{c.content} 👍{c.like}")
+                lines.append(f"      【{c.name}】{c.content} {c.like}赞")
 
         desc = vd.desc.strip()
         if desc:
             short_desc = desc[:100] + "..." if len(desc) > 100 else desc
-            lines.append(f"   📝 {short_desc}")
+            lines.append(f"   {short_desc}")
 
-        lines.append(f"   🔗 {vd.link}")
+        lines.append(f"   链接: {vd.link}")
 
     lines.append(f"{'─' * 30}")
-    lines.append(f"\n🔄 策略: {label} | 下次继续发现好内容~")
+    lines.append(f"\n策略: {label} | 下次继续发现好内容~")
     return "\n".join(lines)
 
 
