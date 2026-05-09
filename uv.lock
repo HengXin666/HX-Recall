@@ -18,18 +18,11 @@ wheels = [
 [[package]]
 name = "bilibili-api"
 version = "0.2.0"
-source = { directory = "../HX-Workflows/bilibili-api" }
+source = { git = "https://github.com/HengXin666/HX-Workflows.git?subdirectory=bilibili-api#29b1480ce5161083623e3546d8409de9d9977080" }
 dependencies = [
     { name = "httpx" },
     { name = "hx-git-db" },
     { name = "qrcode" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "httpx", specifier = ">=0.27.0" },
-    { name = "hx-git-db", git = "https://github.com/HengXin666/HX-Git-DB.git" },
-    { name = "qrcode", specifier = ">=7.4" },
 ]
 
 [[package]]
@@ -136,16 +129,16 @@ source = { git = "https://github.com/HengXin666/HX-Git-DB.git#c91527ead92f778a69
 
 [[package]]
 name = "hx-houtiku"
-version = "1.0.0"
+version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "eciespy" },
     { name = "httpx" },
     { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c3/af/86bf4c10e52397a270976eeb3fad9c929635d539c5a9e64ef5425f15af17/hx_houtiku-1.0.0.tar.gz", hash = "sha256:5b3aa796e165be30e4be878b0db4e2fd17ce04ccecf5a8e0d2b0ad961f17159b", size = 5983, upload-time = "2026-04-19T07:38:01.026Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b5/cd/a4ab593d4dd16ab0f212f6deab088fe04d1227b3f07954c1a8adad94b233/hx_houtiku-1.3.0.tar.gz", hash = "sha256:d7376e136e34942c6909663f77c4a55288a40f1d282be7debcea4da396b43ad0", size = 31237, upload-time = "2026-04-23T16:02:01.753Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/0d/8c2b765386b9e249993ba0dab1c588ea5711dedfc3cefaf2190273738d4d/hx_houtiku-1.0.0-py3-none-any.whl", hash = "sha256:8778404086a31842f92be55cd9db9b62efb9631a9cffb866cbe03913326fb45d", size = 8220, upload-time = "2026-04-19T07:37:59.751Z" },
+    { url = "https://files.pythonhosted.org/packages/f8/18/b4bd27adad391db16d1a854d598bbb451e7d12d880709ae8f529bf4349b8/hx_houtiku-1.3.0-py3-none-any.whl", hash = "sha256:d57179d36865133a5b73d79d9d2ad5f8655d567b78c0b18d030b903b807f6853", size = 9126, upload-time = "2026-04-23T16:02:00.405Z" },
 ]
 
 [[package]]
@@ -162,10 +155,10 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "bilibili-api", directory = "../HX-Workflows/bilibili-api" },
+    { name = "bilibili-api", git = "https://github.com/HengXin666/HX-Workflows.git?subdirectory=bilibili-api" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "hx-git-db", git = "https://github.com/HengXin666/HX-Git-DB.git" },
-    { name = "hx-houtiku", specifier = ">=1.0.0" },
+    { name = "hx-houtiku", specifier = ">=1.3.0" },
     { name = "pyyaml", specifier = ">=6.0" },
 ]
 

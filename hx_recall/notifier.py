@@ -372,6 +372,8 @@ def _notify_houtiku(message: str, cfg: "AppConfig", videos_data: list[VideoData]
         client = HxHoutikuClient(
             endpoint=cfg.houtiku.endpoint,
             api_token=cfg.houtiku.token,
+            recipients=cfg.houtiku.recipients or None,
+            auto_fetch_recipients=not bool(cfg.houtiku.recipients),
         )
         client.send(
             title=f"📚 B站收藏夹回顾 ({_today_str()})",
@@ -379,6 +381,7 @@ def _notify_houtiku(message: str, cfg: "AppConfig", videos_data: list[VideoData]
             content_type="html",
             priority="default",
             group="hx-recall",
+            channel_id="hx-recall",
         )
         print("✅ HouTiKu推送成功")
     except Exception as e:

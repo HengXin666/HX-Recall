@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "bilibili-api @ git+https://github.com/HengXin666/HX-Workflows.git#subdirectory=bilibili-api",
     "hx-git-db @ git+https://github.com/HengXin666/HX-Git-DB.git",
-    "hx-houtiku>=1.0.0",
+    "hx-houtiku>=1.3.0",
     "httpx>=0.27.0",
     "pyyaml>=6.0",
 ]

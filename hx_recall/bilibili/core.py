@@ -56,11 +56,17 @@ def _patch_db_cleanup(db: "DataBase") -> None:
 
 
 def _load_houtiku_config_from_gitdb(cfg: "AppConfig") -> None:
-    """从 Git DB 的 HX-HouTiKu 分支读取 .env 获取 HouTiKu 配置"""
+    """从 Git DB 的 HX-HouTiKu 分支读取 .env 获取 HouTiKu 配置
+
+    依赖 hx-git-db (only 模式) 从远程仓库提取 .env:
+      https://github.com/HengXin666/__HX-Data__.git → HX-HouTiKu 分支 → .env
+    """
     if not cfg.git_db.enabled:
         return
 
     try:
+        import json
+
         from hx_git_db import make_database
 
         repo_url = "https://github.com/HengXin666/__HX-Data__.git"
@@ -79,6 +85,7 @@ def _load_houtiku_config_from_gitdb(cfg: "AppConfig") -> None:
 
         endpoint = ""
         api_token = ""
+        recipients_raw = ""
         for line in env_content.splitlines():
             line = line.strip()
             if not line or line.startswith("#"):
@@ -91,11 +98,18 @@ def _load_houtiku_config_from_gitdb(cfg: "AppConfig") -> None:
                     endpoint = value
                 elif key == "HX_HOUTIKU_TOKEN":
                     api_token = value
+                elif key == "HX_HOUTIKU_RECIPIENTS":
+                    recipients_raw = value
 
         if endpoint and api_token:
             cfg.houtiku.enabled = True
             cfg.houtiku.endpoint = endpoint
             cfg.houtiku.token = api_token
+            if recipients_raw:
+                try:
+                    cfg.houtiku.recipients = json.loads(recipients_raw)
+                except json.JSONDecodeError:
+                    print("[HouTiKu] HX_HOUTIKU_RECIPIENTS JSON 解析失败，将自动从 API 获取")
             print(f"[HouTiKu] 已从 Git DB 加载配置 (endpoint: {endpoint[:30]}...)")
         else:
             print("[HouTiKu] .env 中缺少 HX_HOUTIKU_ENDPOINT 或 HX_HOUTIKU_TOKEN")

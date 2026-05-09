@@ -86,8 +86,9 @@ class HouTiKuConfig:
     配置从 Git DB 的 HX-HouTiKu 分支 .env 文件中自动读取。
     """
     enabled: bool = False
-    endpoint: str = ""   # HX_HOUTIKU_ENDPOINT
-    token: str = ""      # HX_HOUTIKU_TOKEN
+    endpoint: str = ""       # HX_HOUTIKU_ENDPOINT
+    token: str = ""          # HX_HOUTIKU_TOKEN
+    recipients: list[dict] = field(default_factory=list)  # HX_HOUTIKU_RECIPIENTS (JSON)
 
 
 @dataclass
