@@ -9,7 +9,7 @@ from pathlib import Path
 
 import yaml
 
-from hx_recall.bilibili.config import BilibiliCredentialConfig, DustConfig
+from hx_recall.bilibili.config import BiliTokenConfig, DustConfig
 
 
 @dataclass
@@ -93,8 +93,8 @@ class HouTiKuConfig:
 @dataclass
 class AppConfig:
     bilibili_uid: int = 0
-    bilibili_credential: BilibiliCredentialConfig = field(
-        default_factory=BilibiliCredentialConfig
+    bilibili_token: BiliTokenConfig = field(
+        default_factory=BiliTokenConfig
     )
     top_k: int = 5
     strategy: str = "random"
@@ -125,17 +125,13 @@ def load_config(path: str = "config.yaml") -> AppConfig:
 
     cfg = AppConfig(
         bilibili_uid=raw.get("bilibili_uid", 0),
-        bilibili_credential=BilibiliCredentialConfig(
-            sessdata=raw.get("bilibili_credential", {}).get("sessdata", ""),
-            bili_jct=raw.get("bilibili_credential", {}).get("bili_jct", ""),
-            dedeuserid=raw.get("bilibili_credential", {}).get("dedeuserid", ""),
-            dedeuserid_ckmd5=raw.get("bilibili_credential", {}).get(
-                "dedeuserid_ckmd5", ""
+        bilibili_token=BiliTokenConfig(
+            repo=raw.get("bilibili_token", {}).get(
+                "repo", "https://github.com/HengXin666/__HX-Data__.git"
             ),
-            expires_at=raw.get("bilibili_credential", {}).get("expires_at", ""),
-            refresh_token=raw.get("bilibili_credential", {}).get(
-                "refresh_token", ""
-            ),
+            branch=raw.get("bilibili_token", {}).get("branch", "bilibili-token"),
+            auto_refresh_days=raw.get("bilibili_token", {}).get("auto_refresh_days", 7),
+            token=raw.get("bilibili_token", {}).get("token", ""),
         ),
         top_k=raw.get("top_k", 5),
         strategy=raw.get("strategy", "random"),

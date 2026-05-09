@@ -3,19 +3,18 @@
 # 功能: 每天从你的B站收藏夹中挑选"最久未见的好内容"推送给你
 # 默认: 每天 UTC 10:00 (北京时间 18:00)
 #
-# 缓存: 使用 Git DB (only 模式) 存储到远程 Git 仓库的指定分支
-# 仓库地址和分支通过 GIT_DB_REPO_URL / GIT_DB_BRANCH Secrets 配置
-# 无需 commit 缓存文件到本仓库
+# 凭证: 使用 HX-Workflows 的 bilibili-api (OAuth2 Token 持久化保活)
+# Token 由 HX-Workflows 的 CI 每日自动刷新，存储于 __HX-Data__ 仓库的 bilibili-token 分支
 #
 # 首次使用:
-#   1. Fork 本仓库
-#   2. Settings → Secrets → Actions 添加:
-#      - SESSDATA: F12→Console 运行一键脚本获取
+#   1. Fork 本仓库 + HX-Workflows 仓库
+#   2. 在 HX-Workflows 中运行 upload_token.py 完成首次扫码登录
+#   3. 启用 HX-Workflows 的 CI (bilibili-token-refresh.yml)
+#   4. Settings → Secrets → Actions 添加:
 #      - DEDEUSERID: 你的B站UID
-#      - REFRESH_TOKEN: ac_time_value (推荐, 自动续期)
 #      - GIT_DB_REPO_URL: Git DB 仓库地址 (如 https://github.com/user/repo.git)
 #      - GIT_DB_BRANCH: Git DB 分支名 (如 HX-RECALL)
-#      - GIT_DB_TOKEN: 有目标仓库写权限的 PAT (Personal Access Token)
+#      - GIT_DB_TOKEN: 有 __HX-Data__ 仓库读权限的 PAT (Personal Access Token)
 #      邮件推送(可选):
 #      - NOTIFY_EMAIL_SMTP: SMTP服务器 (如 smtp.qq.com)
 #      - NOTIFY_EMAIL_SENDER: 发件邮箱
@@ -27,7 +26,6 @@
 #      - TOP_K: 每次推送数量 (默认5)
 #      - DUST_COOLDOWN_DAYS: 吃灰冷却期天数 (默认30)
 #      - DUST_ALLOW_REPUSH: 冷却期后是否允许重复推送 (true/false, 默认true)
-#   3. 详见 GET_COOKIES_GUIDE.md
 
 name: Recall Dusty Favorites
 
@@ -68,9 +66,9 @@ jobs:
 
           cfg = {
             'bilibili_uid': int(os.environ.get('DEDEUSERID', '0') or '0'),
-            'bilibili_credential': {
-              'sessdata': os.environ.get('SESSDATA', ''),
-              'dedeuserid': os.environ.get('DEDEUSERID', ''),
+            'bilibili_token': {
+              'repo': 'https://github.com/HengXin666/__HX-Data__.git',
+              'branch': 'bilibili-token',
             },
             'top_k': int(os.environ.get('TOP_K', '5') or '5'),
             'strategy': os.environ.get('STRATEGY', 'dusty') or 'dusty',
@@ -113,9 +111,7 @@ jobs:
           print('config.yaml created from secrets')
           "
         env:
-          SESSDATA: ${{ secrets.SESSDATA }}
           DEDEUSERID: ${{ secrets.DEDEUSERID }}
-          REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
           GIT_DB_REPO_URL: ${{ secrets.GIT_DB_REPO_URL }}
           GIT_DB_BRANCH: ${{ secrets.GIT_DB_BRANCH }}
           GIT_DB_TOKEN: ${{ secrets.GIT_DB_TOKEN }}
@@ -125,11 +121,8 @@ jobs:
           NOTIFY_EMAIL_RECEIVERS: ${{ secrets.NOTIFY_EMAIL_RECEIVERS }}
           FAVORITE_IDS: ${{ vars.FAVORITE_IDS }}
           STRATEGY: ${{ vars.STRATEGY }}
-          # 每次推送数量
           TOP_K: ${{ vars.TOP_K }}
-          # 冷却期天数
           DUST_COOLDOWN_DAYS: ${{ vars.DUST_COOLDOWN_DAYS }}
-          # 选取策略: random(随机) | latest(最新收藏) | oldest(最老收藏-适合回顾) | dusty(吃灰清灰-优先推最久未见的)
           DUST_ALLOW_REPUSH: ${{ vars.DUST_ALLOW_REPUSH }}
 
       - name: Run HX-Recall

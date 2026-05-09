@@ -17,6 +17,7 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True)
 
+from bilibili_api import BiliTokenManager, BiliAPI
 from hx_recall.config import load_config
 from hx_recall.bilibili.fetcher import (
     get_user_favorites,
@@ -25,10 +26,9 @@ from hx_recall.bilibili.fetcher import (
     get_video_ai_conclusion,
     get_comment_ai_summary,
     get_hot_comments,
-    create_credential,
 )
 from hx_recall.selector import select_videos
-from hx_recall.notifier import notify, send_credential_alert
+from hx_recall.notifier import notify
 from hx_recall.formatter import format_message, format_video_data_list
 from hx_recall.state import RecallState, get_state_path
 from hx_recall.video_cache import VideoCache, get_cache_path
@@ -56,11 +56,7 @@ def _patch_db_cleanup(db: "DataBase") -> None:
 
 
 def _load_houtiku_config_from_gitdb(cfg: "AppConfig") -> None:
-    """从 Git DB 的 HX-HouTiKu 分支读取 .env 获取 HouTiKu 配置
-
-    使用 hx-git-db 从 https://github.com/HengXin666/__HX-Data__.git 的
-    HX-HouTiKu 分支下读取 .env 文件，解析 HX_HOUTIKU_ENDPOINT 和 HX_HOUTIKU_TOKEN。
-    """
+    """从 Git DB 的 HX-HouTiKu 分支读取 .env 获取 HouTiKu 配置"""
     if not cfg.git_db.enabled:
         return
 
@@ -81,7 +77,6 @@ def _load_houtiku_config_from_gitdb(cfg: "AppConfig") -> None:
             print("[HouTiKu] Git DB 中未找到 .env 文件")
             return
 
-        # 解析 .env 文件
         endpoint = ""
         api_token = ""
         for line in env_content.splitlines():
@@ -109,57 +104,19 @@ def _load_houtiku_config_from_gitdb(cfg: "AppConfig") -> None:
         print(f"[HouTiKu] 从 Git DB 加载配置失败: {e}")
 
 
-async def _verify_and_recover_credential(
-    config_path: str, cfg: "AppConfig"
-) -> "Credential":
-    """验证凭证有效性，失效时触发浏览器登录回退，CI环境中发告警邮件"""
-    from hx_recall.bilibili.browser_login import browser_login_fallback, verify_credential
-    from hx_recall.config import load_config
-
-    cred_cfg = cfg.bilibili_credential
-    is_ci = bool(os.environ.get("GITHUB_ACTIONS") or os.environ.get("CI"))
-
-    if cred_cfg.sessdata:
-        data = await verify_credential(cred_cfg.sessdata, cred_cfg.dedeuserid)
-        if data.get("isLogin"):
-            print(f"[Credential] 当前凭证有效, 用户: {data.get('uname', 'unknown')}")
-            return create_credential(
-                sessdata=cred_cfg.sessdata,
-                bili_jct=cred_cfg.bili_jct,
-                dedeuserid=cred_cfg.dedeuserid,
-                dedeuserid_ckmd5=cred_cfg.dedeuserid_ckmd5,
-            )
-        print("[Credential] 当前凭证已失效")
-
-        # CI环境：无法打开浏览器，发告警邮件并退出
-        if is_ci:
-            print("[Credential] CI环境检测到，无法打开浏览器")
-            send_credential_alert(cfg)
-            raise SystemExit(1)
-
-        # 本地环境：尝试浏览器登录回退
-        print("[Credential] 尝试浏览器登录回退...")
-
-    browser_cred = await browser_login_fallback(config_path)
-    if browser_cred and browser_cred.is_valid:
-        cfg = load_config(config_path)
-        cred_cfg = cfg.bilibili_credential
-        return create_credential(
-            sessdata=cred_cfg.sessdata,
-            bili_jct=cred_cfg.bili_jct,
-            dedeuserid=cred_cfg.dedeuserid,
-            dedeuserid_ckmd5=cred_cfg.dedeuserid_ckmd5,
-        )
-
-    # 浏览器登录也失败
-    print("[Credential] 浏览器登录失败，继续使用原始凭证（后续可能遇到权限错误）")
-    send_credential_alert(cfg)
-    return create_credential(
-        sessdata=cred_cfg.sessdata,
-        bili_jct=cred_cfg.bili_jct,
-        dedeuserid=cred_cfg.dedeuserid,
-        dedeuserid_ckmd5=cred_cfg.dedeuserid_ckmd5,
+async def _init_api(cfg: "AppConfig") -> BiliAPI:
+    """初始化 BiliAPI：从 HX-Git-DB 加载 OAuth2 Token"""
+    token_cfg = cfg.bilibili_token
+    token_mgr = BiliTokenManager(
+        repo=token_cfg.repo,
+        branch=token_cfg.branch,
+        auto_refresh_days=token_cfg.auto_refresh_days,
+        token=token_cfg.token or None,
     )
+    # 验证 token 可用
+    t = await asyncio.to_thread(token_mgr.get_token)
+    print(f"[Credential] OAuth2 Token 有效, 用户: {t.get('uname', 'unknown')} (UID: {t.get('mid', 0)})")
+    return BiliAPI(token_mgr)
 
 
 def _save_cache(cache: VideoCache, dest: "str | DataBase") -> None:
@@ -180,31 +137,14 @@ def _save_state(state: RecallState, dest: "str | DataBase") -> None:
 
 async def _crawl_favorites_incremental(
     target_favs: list[dict],
-    credential,
+    api: BiliAPI,
     cache: VideoCache,
     state: RecallState,
     cache_dest: "str | DataBase",
     state_dest: "str | DataBase",
     strategy: str,
 ) -> list[dict]:
-    """增量爬取收藏夹视频（边爬边存，断点续爬）
-
-    爬取进度由 state 管理（断点页码、已知bvid等），
-    视频元数据由 cache 管理（详细信息、AI总结等）。
-    每页爬完立即存盘，中断也不丢数据。
-
-    Args:
-        target_favs: 目标收藏夹列表
-        credential: B站凭证
-        cache: 视频元数据缓存
-        state: 推送状态+爬取进度
-        cache_dest: 缓存保存目标（文件路径或 DataBase）
-        state_dest: 状态保存目标（文件路径或 DataBase）
-        strategy: 选取策略(决定增量模式)
-
-    Returns:
-        所有视频列表(缓存+新爬取)
-    """
+    """增量爬取收藏夹视频（边爬边存，断点续爬）"""
     all_new_videos = []
 
     for i, fav in enumerate(target_favs):
@@ -212,11 +152,9 @@ async def _crawl_favorites_incremental(
         fav_title = fav["title"]
         media_count = fav.get("media_count", 0)
 
-        # 从 state 获取断点续爬页码
         resume_page = state.get_resume_page(fav_id)
         cached_count = state.get_fav_crawled_count(fav_id)
 
-        # 增量模式：有缓存时使用已知bvid集合，遇到已缓存视频则停止翻页
         known_bvids = None
         if cached_count > 0:
             known_bvids = state.get_known_bvids(fav_id)
@@ -229,7 +167,6 @@ async def _crawl_favorites_incremental(
         print(f"[Fav] ({i+1}/{len(target_favs)}) 正在获取: {fav_title} "
               f"({media_count}个视频, 从第{resume_page}页开始)")
 
-        # 逐页回调：每页爬完就存盘
         async def _on_page_done(
             page_videos: list[dict],
             page: int,
@@ -238,11 +175,9 @@ async def _crawl_favorites_incremental(
             _fav_title: str = fav_title,
             _media_count: int = media_count,
         ) -> None:
-            # 更新视频元数据缓存
             cache.update_fav_videos(_fav_id, _fav_title, page_videos)
             _save_cache(cache, cache_dest)
 
-            # 更新爬取进度
             new_bvids = [v["bvid"] for v in page_videos if v.get("bvid")]
             state.update_fav_progress(
                 _fav_id, _fav_title, page,
@@ -254,7 +189,7 @@ async def _crawl_favorites_incremental(
             _save_state(state, state_dest)
 
         videos, final_page, is_complete = await get_favorite_videos(
-            fav_id, credential=credential,
+            fav_id, api=api,
             source=fav.get("source", ""),
             resume_page=resume_page,
             media_count=media_count,
@@ -277,15 +212,11 @@ async def _crawl_favorites_incremental(
 
 async def _enrich_videos_with_detail(
     selected: list[dict],
-    credential,
+    api: BiliAPI,
     cache: VideoCache,
     cache_dest: "str | DataBase",
 ) -> list[dict]:
-    """获取视频详细信息+AI总结（缓存复用，边获取边存）
-
-    对于已缓存详细信息的视频直接使用缓存。
-    AI总结是不变数据，缓存后不再重复获取。
-    """
+    """获取视频详细信息+AI总结（缓存复用，边获取边存）"""
     detailed = []
     total = len(selected)
 
@@ -319,10 +250,9 @@ async def _enrich_videos_with_detail(
             print(f"  详细信息: 缓存命中")
         else:
             try:
-                info = await get_video_info(bvid, credential=credential)
+                info = await get_video_info(bvid, api=api)
             except Exception as e:
-                # 已失效/不可见的视频(如 code 62002 "稿件不可见")，跳过
-                print(f"  ⚠️ 已失效视频, 跳过: {e}")
+                print(f"  已失效视频, 跳过: {e}")
                 continue
             info["_fav_name"] = v.get("_fav_name", "")
             cache.update_video_detail(bvid, info)
@@ -337,7 +267,7 @@ async def _enrich_videos_with_detail(
             ai_conclusion = ""
             if info.get("cid") and info.get("owner_mid"):
                 ai_conclusion = await get_video_ai_conclusion(
-                    bvid, info["cid"], info["owner_mid"], credential=credential
+                    bvid, info["cid"], info["owner_mid"], api=api
                 )
             info["ai_conclusion"] = ai_conclusion
             cache.update_video_ai(bvid, ai_conclusion=ai_conclusion)
@@ -351,7 +281,7 @@ async def _enrich_videos_with_detail(
         else:
             comment_summary = ""
             if info.get("aid"):
-                comment_summary = await get_comment_ai_summary(info["aid"])
+                comment_summary = await get_comment_ai_summary(info["aid"], api=api)
             info["comment_summary"] = comment_summary
             cache.update_video_ai(bvid, comment_summary=comment_summary)
             _save_cache(cache, cache_dest)
@@ -364,7 +294,7 @@ async def _enrich_videos_with_detail(
         else:
             hot_comments = []
             if info.get("aid"):
-                hot_comments = await get_hot_comments(info["aid"], credential=credential)
+                hot_comments = await get_hot_comments(info["aid"], api=api)
             info["hot_comments"] = hot_comments
             cache.update_video_ai(bvid, hot_comments=hot_comments)
             _save_cache(cache, cache_dest)
@@ -377,7 +307,11 @@ async def _enrich_videos_with_detail(
 
 async def run(config_path: str = "config.yaml") -> None:
     cfg = load_config(config_path)
-    uid = cfg.bilibili_uid
+
+    # 初始化 BiliAPI（从 HX-Git-DB 加载 OAuth2 Token，自动保活）
+    api = await _init_api(cfg)
+
+    uid = cfg.bilibili_uid or api._token.mid
 
     # 从 Git DB 加载 HouTiKu 推送配置
     _load_houtiku_config_from_gitdb(cfg)
@@ -391,14 +325,17 @@ async def run(config_path: str = "config.yaml") -> None:
         db = make_database(cfg.git_db.repo_url, cfg.git_db.branch, only=True, token=token)
         _patch_db_cleanup(db)
         with db:
-            await _run_inner(cfg, uid, db=db, config_path=config_path)
+            await _run_inner(cfg, uid, api, db=db, config_path=config_path)
     else:
-        await _run_inner(cfg, uid, db=None, config_path=config_path)
+        await _run_inner(cfg, uid, api, db=None, config_path=config_path)
+
+    api.close()
 
 
 async def _run_inner(
     cfg: "AppConfig",
     uid: int,
+    api: BiliAPI,
     db: "DataBase | None",
     config_path: str,
 ) -> None:
@@ -417,11 +354,8 @@ async def _run_inner(
     print(f"[State] 爬取进度: {len(state.fav_progress)} 个收藏夹, 已知 {state.total_cached_bvids} 个视频")
     print(f"[Cache] 视频缓存: {len(cache.videos)} 个视频")
 
-    # 创建凭证对象（验证有效性，失效时浏览器登录回退）
-    credential = await _verify_and_recover_credential(config_path, cfg)
-
     # 获取收藏夹列表
-    fav_lists = await get_user_favorites(uid, credential=credential)
+    fav_lists = await get_user_favorites(uid, api=api)
     target_favs = fav_lists
 
     if cfg.favorite_ids:
@@ -433,7 +367,6 @@ async def _run_inner(
 
     print(f"[Fav] 目标收藏夹 {len(target_favs)} 个: {[f['title'] for f in target_favs]}")
 
-    # 确定缓存保存路径（本地模式用文件路径，Git DB 模式用 db 实例）
     if db:
         cache_save = db
         state_save = db
@@ -443,7 +376,7 @@ async def _run_inner(
 
     # 增量爬取收藏夹视频（边爬边存，断点续爬）
     all_new_videos = await _crawl_favorites_incremental(
-        target_favs, credential, cache, state,
+        target_favs, api, cache, state,
         cache_save, state_save, cfg.strategy
     )
 
@@ -499,7 +432,7 @@ async def _run_inner(
 
     # 获取视频详细信息 + AI总结（缓存复用）
     detailed = await _enrich_videos_with_detail(
-        selected, credential, cache, cache_save
+        selected, api, cache, cache_save
     )
 
     # 格式化消息
